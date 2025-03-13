@@ -1,0 +1,216 @@
+#include <stdio.h>
+#include <stdlib.h>
+#include <string.h>
+#include <ctype.h>
+
+typedef struct {
+    int id;
+    char name[50];
+    float price;
+} FoodItem;
+
+typedef struct OrderItem {
+    FoodItem* item;
+    int quantity;
+    struct OrderItem* next;
+} OrderItem;
+
+typedef struct {
+    int orderId;
+    OrderItem* items;
+    float total;
+} Order;
+
+// Linked list for Menu
+typedef struct MenuItem {
+    FoodItem food;
+    struct MenuItem* next;
+} MenuItem;
+
+MenuItem* menuHead = NULL;
+
+void addMenuItem(FoodItem food) {
+    MenuItem* newItem = (MenuItem*)malloc(sizeof(MenuItem));
+    if (newItem == NULL) {
+        perror("Memory allocation failed");
+        return;
+    }
+    newItem->food = food;
+    newItem->next = NULL;
+
+    if (menuHead == NULL) {
+        menuHead = newItem;
+    } else {
+        MenuItem* current = menuHead;
+        while (current->next != NULL) {
+            current = current->next;
+        }
+        current->next = newItem;
+    }
+}
+
+void displayMenu() {
+    printf("\n--- Delicious Delights Menu ---\n");
+    printf("--------------------------------\n");
+    printf("ID | Item Name                | Price\n");
+    printf("--------------------------------\n");
+
+    MenuItem* current = menuHead;
+    while (current != NULL) {
+        printf("%2d | %-25s | Rs. %.2f\n", current->food.id, current->food.name, current->food.price);
+        current = current->next;
+    }
+    printf("--------------------------------\n");
+}
+
+FoodItem* findMenuItem(int itemId) {
+    MenuItem* current = menuHead;
+    while (current != NULL) {
+        if (current->food.id == itemId) {
+            return &(current->food);
+        }
+        current = current->next;
+    }
+    return NULL;
+}
+
+Order takeOrder(int orderId) {
+    Order currentOrder;
+    currentOrder.orderId = orderId;
+    currentOrder.items = NULL;
+    currentOrder.total = 0;
+
+    printf("\nEnter the item IDs you want to order (or 0 to finish):\n");
+
+    int itemId, quantity;
+    while (1) {
+        printf("Enter Item ID (or 0 to finish): ");
+        scanf("%d", &itemId);
+
+        if (itemId == 0) {
+            break;
+        }
+
+        FoodItem* item = findMenuItem(itemId);
+        if (item == NULL) {
+            printf("Invalid item ID. Please try again.\n");
+            continue;
+        }
+
+        printf("Enter quantity: ");
+        scanf("%d", &quantity);
+
+        if (quantity <= 0) {
+            printf("Invalid quantity. Please try again.\n");
+            continue;
+        }
+
+        OrderItem* newOrderItem = (OrderItem*)malloc(sizeof(OrderItem));
+        if (newOrderItem == NULL) {
+            perror("Memory allocation failed");
+            return currentOrder;
+        }
+        newOrderItem->item = item;
+        newOrderItem->quantity = quantity;
+        newOrderItem->next = NULL;
+
+        if (currentOrder.items == NULL) {
+            currentOrder.items = newOrderItem;
+        } else {
+            OrderItem* current = currentOrder.items;
+            while (current->next != NULL) {
+                current = current->next;
+            }
+            current->next = newOrderItem;
+        }
+
+        currentOrder.total += item->price * quantity;
+
+        printf("Added to order! Current total: Rs. %.2f\n", currentOrder.total);
+    }
+    return currentOrder;
+}
+
+void displayOrderSummary(Order order) {
+    printf("\n--- Order Summary ---\n");
+    printf("Order ID: %d\n", order.orderId);
+    printf("--------------------------------\n");
+    printf("Items:\n");
+
+    OrderItem* current = order.items;
+    while (current != NULL) {
+        printf("- %s x %d\n", current->item->name, current->quantity);
+        current = current->next;
+    }
+
+    printf("--------------------------------\n");
+    printf("Total: Rs. %.2f\n", order.total);
+    printf("--------------------------------\n");
+    printf("Thank you for your order!\n");
+}
+
+void freeMenu() {
+    MenuItem* current = menuHead;
+    while(current != NULL){
+        MenuItem* temp = current;
+        current = current->next;
+        free(temp);
+    }
+    menuHead = NULL;
+}
+
+void freeOrder(Order order){
+    OrderItem* current = order.items;
+    while(current != NULL){
+        OrderItem* temp = current;
+        current = current->next;
+        free(temp);
+    }
+}
+
+int main() {
+    addMenuItem((FoodItem){1, "Chicken Biryani", 300.00});
+    addMenuItem((FoodItem){2, "Vegetable Biryani", 180.00});
+    addMenuItem((FoodItem){3, "Mushroom Biryani", 200.00});
+    addMenuItem((FoodItem){4, "Palak Panner", 180.00});
+    addMenuItem((FoodItem){5, "Chicken Buttermasala", 250.00});
+    addMenuItem((FoodItem){6, "Pizza", 200.00});
+    addMenuItem((FoodItem){7, "Burger", 150.00});
+    addMenuItem((FoodItem){8, "Gobi Noodles", 100.00});
+    addMenuItem((FoodItem){9, "Chicken Noodles", 150.00});
+    addMenuItem((FoodItem){10, "Roti", 40.00});
+    addMenuItem((FoodItem){11, "Ice Cream", 80.00});
+    addMenuItem((FoodItem){12, "Cold Drink", 50.00});
+
+    int orderIdCounter = 1;
+
+    while (1) {
+        printf("\n--- Welcome to Food Ordering System ---\n");
+        printf("1. View Menu\n");
+        printf("2. Place Order\n");
+        printf("3. Exit\n");
+        printf("Enter your choice: ");
+
+        int choice;
+        scanf("%d", &choice);
+
+        switch (choice) {
+            case 1:
+                displayMenu();
+                break;
+            case 2: {
+                Order currentOrder = takeOrder(orderIdCounter++);
+                displayOrderSummary(currentOrder);
+                freeOrder(currentOrder);
+                break;
+            }
+            case 3:
+                printf("Thank you for using the Food Ordering System!\n");
+                freeMenu();
+                exit(0);
+            default:
+                printf("Invalid choice. Please try again.\n");
+        }
+    }
+    return 0;
+}
